@@ -21,11 +21,11 @@ $modx->setLogTarget(XPDO_CLI_MODE ? 'ECHO' : 'HTML');
 class oneS_import
 {
 
-    private array $categories;
+    private  $categories;
     /**
      * @var mixed
      */
-    private modX $modx;
+    private  $modx;
 
     public function __construct(&$modx, $config)
     {
@@ -90,7 +90,7 @@ class oneS_import
 
             $res->set('isfolder', 1);
             $res->set('class_key', 'msCategory');
-            $res->set('published', '1');
+            //$res->set('published', '1');
             $res->save();
             $log .= "Cat: UP {$res->id} {$res->pagetitle} - {$res->parent} - GroupID:{$tv->value}<br>";
 
@@ -117,12 +117,14 @@ class oneS_import
     {
 
         $data = $this->xmlFileToArray($this->config['import_file']);
-        $products = $data["Каталог"]['Товары']['Товар'];
+        $products = $data["Классификатор"]['Товары']['товар'];
 
-        $perPage = 100;
+        $perPage = 350;
         $offset = $_GET['offset'] ?? 0;
         $countAll = count($products);
         echo "$offset is $countAll<br>";
+
+
 
 
         $products = array_slice($products, $offset, $perPage);
@@ -134,7 +136,7 @@ class oneS_import
 
             if ($countAll >= $offset) {
 
-                echo "<script>window.location.href = 'https://magitondeti.ru/assets/1c/cron.php?method=getProducts&offset=$offset';</script>";
+                echo "<script>window.location.href = 'http://komfort.forestlj.beget.tech/assets/1c_files/cron.php?method=getProducts&offset=$offset';</script>";
             }
 
 
@@ -149,10 +151,10 @@ class oneS_import
     {
 
         $data = $this->xmlFileToArray($this->config['offers_file']);
-        $products = $data["ПакетПредложений"]['Предложения']['Предложение'];
+        $products = $data["Классификатор"]["ПакетПредложений"]['Предложения']['Предложение'];
 
         $perPage = 300;
-        $offset = $_GET['offset'] ?? 0;
+        $offset = $_GET['offset'] ? $_GET['offset'] : 0;
         $countAll = count($products);
         echo "$offset is $countAll<br>";
 
@@ -163,6 +165,7 @@ class oneS_import
 
         if ($products) {
             foreach ($products as $item) {
+
                 echo $this->uProductOfferModx($item);
             }
             $offset += $perPage;
@@ -173,7 +176,7 @@ class oneS_import
 
 
 
-                echo "<script>window.location.href = 'https://magitondeti.ru/assets/1c/cron.php?method=getOffers&offset=$offset';</script>";
+                echo "<script>window.location.href = 'http://komfort.forestlj.beget.tech/assets/1c_files/cron.php?method=getOffers&offset=$offset';</script>";
             }
 
 
@@ -193,11 +196,15 @@ class oneS_import
 
         $tv = $this->modx->getObject('modTemplateVarResource', ['tmplvarid' => $this->config['tv_1c_id'], 'value' => $item["Ид"]]);
 
+
         if ($tv) {
             $res = $this->modx->getObject('msProduct', $tv->contentid);
-            $price_desc = $item["Цены"]["Цена"]["Представление"];
-            $price = $item["Цены"]["Цена"]["ЦенаЗаЕдиницу"];
+            $price_desc = $item["Цены"]["Цены"]["Представление"];
+            $price = $item["Цены"]["Цены"]["ЦенаЗаЕдиницу"];
             $ostatok = $item["Количество"];
+
+
+
             $art = is_array($item["Артикул"]) ? implode(",",$item["Артикул"]) : $item["Артикул"];
             $res->set('price', $price);
             $res->set('article', $art);
@@ -221,6 +228,7 @@ class oneS_import
         //1c_SHtrihkod
         //1c_Artikul
         $log = "";
+
 
         $tv = $this->modx->getObject('modTemplateVarResource', ['tmplvarid' => $this->config['tv_1c_id'], 'value' => $item["Ид"]]);
 
@@ -288,13 +296,22 @@ class oneS_import
             $res->set('pagetitle', $item['Наименование']);
             $res->set('alias', $alias);
             $res->set('parent', $this->config['catalog_id_other']);
+            if ($item['Группы']["Ид"]) {
+                $tvParent = $this->modx->getObject('modTemplateVarResource', ['tmplvarid' => $this->config['tv_1c_id'], 'value' => $item['Группы']["Ид"]]);
+
+                if ($tvParent) {
+                    $res->set('parent', $tvParent->contentid);
+                    $res->set('published', 1);
+                }
+            }
+
+
             $res->set('class_key', 'msProduct');
             $res->save();
             $res->setTVValue($this->config['tv_1c_id'], $item["Ид"]);
             $log .= "1CID: {$item["Ид"]} Product: CR {$res->id} {$res->parent}<br>\n";
         }
 
-        file_put_contents(date("Y-m-d")."_uProductModx.log",$log,FILE_APPEND | LOCK_EX);
         return "<pre>$log</pre>";
 
     }
@@ -342,17 +359,17 @@ class oneS_import
 }
 
 $config = [
-    'import_file' => MODX_ASSETS_PATH . '1c/webdata/import0_1.xml',
-    'offers_file' => MODX_ASSETS_PATH . '1c/webdata/offers0_1.xml',
-    'catalog_id' => 13,
-    'catalog_id_other' => 324,
-    'catalog_tpl' => 7,
-    'product_tpl' => 8,
-    'tv_1c_id' => 26,
-    'tv_1c_SHtrihkod' => 27,
-    'tv_1c_Artikul' => 28,
-    'tv_1c_Count' => 29,
-    'tv_1c_PriceDesk' => 30,
+    'import_file' => MODX_ASSETS_PATH . '1c_files/import0_1.xml',
+    'offers_file' => MODX_ASSETS_PATH . '1c_files/offers0_1.xml',
+    'catalog_id' => 8,
+    'catalog_id_other' => 67,
+    'catalog_tpl' => 2,
+    'product_tpl' => 3,
+    'tv_1c_id' => 20,
+    'tv_1c_SHtrihkod' => 21,
+    'tv_1c_Artikul' => 22,
+    'tv_1c_Count' => 19, //sklad
+    'tv_1c_PriceDesk' => 23,
 ];
 
 $import = new oneS_import($modx, $config);
